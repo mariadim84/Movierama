@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org"  xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-ç">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <link rel="stylesheet" type="text/css" media="all" th:href="@{/css/bootstrap.min.css}">
+
+        <title>Home</title>
+    </head>
+    <body class="p-3 mb-2 bg-light text-black">
+        <div class="container">
+            <div sec:authorize="isAnonymous()">
+                <label><a th:href="@{/login}" >Login</a> / <a th:href="@{/signup}" >Signup</a> </label>
+            </div>
+            <div sec:authorize="isAuthenticated()">
+                Welcome <span sec:authentication="name"></span>
+                <a id="logout-link" href="javascript: document.logoutForm.submit()" > (Logout) </a>
+
+                <form name="logoutForm" th:action="@{/logout}" method="post" th:hidden="true">
+                    <input  hidden type="submit" value="Logout"/>
+                </form>
+            </div>
+            <div sec:authorize="isAuthenticated()">
+                <button style="margin: 0.25em;" type="button" id ="movie-add" class="btn btn-info float-left" onclick="showMovieModal()">
+                    + Add a New Movie
+                </button>
+            </div>
+            <div id="contentDiv" style="clear: right;">
+                <div  id="nav-movies">
+
+                        <div class="table-responsive">
+                                <table class="table table-striped" id="userTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 20%" scope="col">Title</th>
+                                            <th style="width: 50%" scope="col">Description</th>
+                                            <th style="width: 5%" scope="col">Likes</th>
+                                            <th style="width: 5%" scope="col">Hates</th>
+                                            <th style="width: 5%" scope="col">User</th>
+                                            <th style="width: 5%" scope="col">Date</th>
+                                            <th style="width: 10%" scope="col"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="movie: ${movies}">
+                                            <th scope="row" th:text="${movie.movieTitle}"></th>
+                                            <td th:text="${movie.movieDescription}" ></td>
+                                            <td th:text="${movie.likesCount}"> </td>
+                                            <td th:text="${movie.hatesCount}"> </td>
+                                            <td th:text="${movie.username}"> </td>
+                                            <td th:text="${#dates.format(movie.insertDate, 'dd-MM-yyyy')}"></td>
+                                            <td >
+                                                <div sec:authorize="isAuthenticated()">
+                                                    <div th:if="${userid == movie.userId}">
+                                                        <button th:onclick="javascript:showMovieModal([[${movie.movieId}]], [[${movie.movieTitle}]], [[${movie.movieDescription}]])"   class="btn btn-info  edit-movie-button">Edit</button>
+                                                        <a th:href="@{/delete_movie/{id}(id=${movie.movieId})}" id="delete-movie-btn" class="btn btn-info delete-movie-button">Delete</a>
+                                                    </div>
+                                                    <div th:if="${userid != movie.userId}">
+                                                        <div th:if="${(#lists.isEmpty(likedmovies)  OR !#lists.contains(likedmovies, movie.movieId)) AND   !#lists.contains(hatedmovies, movie.movieId) }">
+                                                            <a th:href="@{/add_like/{movieid}(movieid=${movie.movieId})}" id="like-movie-btn" class="btn btn-info like-movie-button">Like</a>
+                                                        </div>
+                                                        <div th:if="${ #lists.contains(likedmovies, movie.movieId) AND !#lists.contains(hatedmovies, movie.movieId)}">
+                                                            <a th:href="@{/delete_like/{movieid}(movieid=${movie.movieId})}" id="delete-like-movie-btn" class="btn btn-info like-movie-button">Unlike</a>
+                                                            <a  id="disabled-hate-movie-btn" class="btn btn-secondary disabled-hate-movie-button" disable>Hate</a>
+                                                        </div>
+                                                        <div th:if="${(#lists.isEmpty(hatedmovies)  OR !#lists.contains(hatedmovies, movie.movieId)) AND !#lists.contains(likedmovies, movie.movieId)}">
+                                                            <a th:href="@{/add_hate/{movieid}(movieid=${movie.movieId})}" id="hate-movie-btn" class="btn btn-info hate-movie-button">Hate</a>
+                                                        </div>
+                                                        <div th:if="${ #lists.contains(hatedmovies, movie.movieId)   AND !#lists.contains(likedmovies, movie.movieId)}">
+                                                            <a th:href="@{/delete_hate/{movieid}(movieid=${movie.movieId})}" id="delete-hate-movie-btn" class="btn btn-info like-movie-button">Unhate</a>
+                                                            <a  id="disabled-like-movie-btn" class="btn btn-secondary disabled-like-movie-button" disable>Like</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        <div class="modal fade" id="movieModal" tabindex="-1" role="dialog" aria-labelledby="movieModalLabel" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="movieModalLabel">Movie</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form th:object="${movie}" action="#" th:action="@{/add_movie}" method="POST">
+                                            <input type="hidden" name="movieId" id="movie-id">
+                                            <div class="form-group">
+                                                <label for="movie-title" class="col-form-label">Title</label>
+                                                <input type="text"  name= "movieTitle" class="form-control" id="movie-title"  maxlength="20"   required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="movie-description" class="col-form-label">Description</label>
+                                                <textarea class="form-control" name="movieDescription" id="movie-description"  rows="5" maxlength="1000" required ></textarea>
+                                            </div>
+                                            <button id="movieSubmit" type="submit" class="d-none"></button>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                        <button id="movie-submit" type="button" class="btn btn-primary" onclick="$('#movieSubmit').click();">Save changes</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        </div>
+
+        <script th:src="@{/js/jquery-slim.min.js}"></script>
+        <script th:src="@{/js/popper.min.js}"></script>
+        <script th:src="@{/js/bootstrap.min.js}"></script>
+
+        <!--For opening the movie modal-->
+        <script type="text/javascript">
+            // For opening the movie modal
+            function showMovieModal(movieId, movieTitle, movieDescription) {
+                $('#movie-id').val(movieId ? movieId : '');
+                $('#movie-title').val(movieTitle ? movieTitle : '');
+                $('#movie-description').val(movieDescription ? movieDescription : '');
+                $('#movieModal').modal('show');
+            }
+
+        </script>
+    </body>
+</html>
